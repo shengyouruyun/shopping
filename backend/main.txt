@@ -1,0 +1,154 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"github.com/graphql-go/graphql"
+	"github.com/graphql-go/handler"
+)
+
+type ShopItem struct {
+	ID          int
+	Name        string
+	Description string
+	Price       float64
+	ImageUrl    string
+}
+
+type Order struct {
+	ID      int
+	Name    string
+	Address string
+	Phone   string
+}
+
+
+type OrderShop struct {
+	OrderId int
+	ShopItemId int
+}
+
+
+// func populate() []Tutorial {
+// 	author := &Author{Name: "Elliot Forbes", Tutorials: []int{1, 2}}
+// 	tutorial := Tutorial{
+// 		ID:     1,
+// 		Title:  "Go GraphQL Tutorial",
+// 		Author: *author,
+// 		Comments: []Comment{
+// 			Comment{Body: "First Comment"},
+// 		},
+// 	}
+// 	tutorial2 := Tutorial{
+// 		ID:     2,
+// 		Title:  "Go GraphQL Tutorial - Part 2",
+// 		Author: *author,
+// 		Comments: []Comment{
+// 			Comment{Body: "Second Comment"},
+// 		},
+// 	}
+
+// 	var tutorials []Tutorial
+// 	tutorials = append(tutorials, tutorial)
+// 	tutorials = append(tutorials, tutorial2)
+
+// 	return tutorials
+// }
+
+var shopItemType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "ShopItem",
+		Fields: graphql.Fields{
+			"ID": &graphql.Field{
+				Type: graphql.Int,
+			},
+			"Name": &graphql.Field{
+				Type: graphql.String,
+			},
+			"Description": &graphql.Field{
+				Type: graphql.String,
+			},
+			"Price": &graphql.Field{
+				Type: graphql.Float,
+			},
+			"ImageUrl": &graphql.Field{
+				Type: graphql.String,
+			},
+		},
+	},
+)
+
+var orderShopType =graphql.NewObject(
+	graphql.ObjectConfig{
+	Name:"OrderShop",
+	Fields:graphql.Fields{
+		"shop_item_name":&graphql.Field{
+			Type:graphql.String,
+		},
+		
+
+
+
+
+	},
+
+
+
+	},
+
+
+)
+// var tutorialType = graphql.NewObject(
+// 	graphql.ObjectConfig{
+// 		Name: "Tutorial",
+// 		Fields: graphql.Fields{
+// 			"id": &graphql.Field{
+// 				Type: graphql.Int,
+// 			},
+// 			"title": &graphql.Field{
+// 				Type: graphql.String,
+// 			},
+// 			"author": &graphql.Field{
+// 				Type: authorType,
+// 			},
+// 			"comments": &graphql.Field{
+// 				Type: graphql.NewList(commentType),
+// 			},
+// 		},
+// 	},
+// )
+
+func main() {
+
+	//tutorials := populate()
+
+	var shopitems = []ShopItem{ShopItem{ID: 1, Name: "book", Description: "buy book", Price: 67.78, ImageUrl: "http://www.baidu.com"}}
+
+	// Schema
+	fields := graphql.Fields{
+		"shopitems": &graphql.Field{
+			Type:        graphql.NewList(shopItemType),
+			Description: "Get Tutorial List",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				return shopitems, nil
+			},
+		},
+		"orders"
+	}
+	rootQuery := graphql.ObjectConfig{Name: "RootQuery", Fields: fields}
+	schemaConfig := graphql.SchemaConfig{Query: graphql.NewObject(rootQuery)}
+	schema, err := graphql.NewSchema(schemaConfig)
+	if err != nil {
+		log.Fatalf("failed to create new schema, error: %v", err)
+
+	}
+
+	h := handler.New(&handler.Config{
+		Schema:   &schema,
+		Pretty:   true,
+		GraphiQL: true,
+	})
+
+	http.Handle("/graphql", h)
+	http.ListenAndServe(":8080", nil)
+}

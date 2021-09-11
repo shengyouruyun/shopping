@@ -1,0 +1,267 @@
+package main
+
+import (
+	//"encoding/json"
+	//"fmt"
+	"log"
+	"net/http"
+
+	"github.com/graphql-go/graphql"
+	"github.com/graphql-go/handler"
+)
+
+type Tutorial struct {
+	ID       int
+	Title    string
+	Author   Author
+	Comments []Comment
+}
+
+type Author struct {
+	Name      string
+	Tutorials []int
+}
+
+type Comment struct {
+	Body string
+}
+
+func populate() []Tutorial {
+	author := &Author{Name: "Elliot Forbes", Tutorials: []int{1, 2}}
+	tutorial := Tutorial{
+		ID:     1,
+		Title:  "Go GraphQL Tutorial",
+		Author: *author,
+		Comments: []Comment{
+			Comment{Body: "First Comment"},
+		},
+	}
+	tutorial2 := Tutorial{
+		ID:     2,
+		Title:  "Go GraphQL Tutorial - Part 2",
+		Author: *author,
+		Comments: []Comment{
+			Comment{Body: "Second Comment"},
+		},
+	}
+
+	var tutorials []Tutorial
+	tutorials = append(tutorials, tutorial)
+	tutorials = append(tutorials, tutorial2)
+
+	return tutorials
+}
+
+var authorType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Author",
+		Fields: graphql.Fields{
+			"Name": &graphql.Field{
+				Type: graphql.String,
+			},
+			"Tutorials": &graphql.Field{
+				Type: graphql.NewList(graphql.Int),
+			},
+		},
+	},
+)
+
+var commentType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Comment",
+		Fields: graphql.Fields{
+			"body": &graphql.Field{
+				Type: graphql.String,
+			},
+		},
+	},
+)
+
+var tutorialType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Tutorial",
+		Fields: graphql.Fields{
+			"id": &graphql.Field{
+				Type: graphql.Int,
+			},
+			"title": &graphql.Field{
+				Type: graphql.String,
+			},
+			"author": &graphql.Field{
+				Type: authorType,
+			},
+			"comments": &graphql.Field{
+				Type: graphql.NewList(commentType),
+			},
+		},
+	},
+)
+
+func main() {
+
+	tutorials := populate()
+
+	// Schema
+	fields := graphql.Fields{
+		"tutorial": &graphql.Field{
+			Type:        tutorialType,
+			Description: "Get Tutorial By ID",
+			Args: graphql.FieldConfigArgument{
+				"id": &graphql.ArgumentConfig{
+					Type: graphql.Int,
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				id, ok := p.Args["id"].(int)
+				if ok {
+					// Find tutorial
+					for _, tutorial := range tutorials {
+						if int(tutorial.ID) == id {
+							return tutorial, nil
+						}
+					}
+				}
+				return nil, nil
+			},
+		},
+		"list": &graphql.Field{
+			Type:        graphql.NewList(tutorialType),
+			Description: "Get Tutorial List",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				return tutorials, nil
+			},
+		},
+	}
+	rootQuery := graphql.ObjectConfig{Name: "RootQuery", Fields: fields}
+	schemaConfig := graphql.SchemaConfig{Query: graphql.NewObject(rootQuery)}
+	schema, err := graphql.NewSchema(schemaConfig)
+	if err != nil {
+		log.Fatalf("failed to create new schema, error: %v", err)
+
+	}
+
+
+
+		h := handler.New(&handler.Config{
+		Schema:   &schema,
+		Pretty:   true,
+		GraphiQL: true,
+	})
+
+	http.Handle("/graphql", h)
+	http.ListenAndServe(":8080", nil)
+
+	// // Query
+	// query := `
+	// 	{
+			// list {
+			// 	title
+			// 	author {
+			// 		Name
+			// 		Tutorials
+			// 	}
+			// }
+	// 	}
+	// `
+	// params := graphql.Params{Schema: schema, RequestString: query}
+	// r := graphql.Do(params)
+	// if len(r.Errors) > 0 {
+	// 	log.Fatalf("failed to execute graphql operation, errors: %+v", r.Errors)
+	// }
+	// rJSON, _ := json.Marshal(r)
+	// fmt.Printf("%s \n", rJSON)
+}
+
+
+
+db, err := sql.Open("sqlite3", "./data.db")
+
+	defer db.Close()
+	var shopitem model.ShopItem
+	
+	if err != nil {
+		response :=model.Response{Status:"failed"}
+		return response, err
+	}
+
+	sql_additem := `
+	INSERT INTO shop_items(
+		name,
+		description,
+		price,
+		image_url
+	) values(?, ?,?,?)
+	`
+
+	stmt, err := db.Prepare(sql_additem)
+	if err != nil {
+		panic(err)
+	}
+	defer stmt.Close()
+
+	_, err1 := stmt.Exec(shopitem.Name,  shopitem.Description, shopitem.Price, shopitem.ImageURL)
+
+	if err1 != nil {
+		panic(err1)
+	}
+
+	response :=model.Response{Status:"success"}
+		return response, err
+type Response {
+    status: String!
+  }
+
+  type Token {
+    token: String!
+  }
+
+  input User {
+    username: String!
+    password: String!
+    token: String!
+  }
+
+  input ShopItem {
+    shop_item_id: Int!
+    name: String!
+    description: String!
+    image_url: String!
+    price: Float!
+  }
+
+  type ShopItemOutput {
+    shop_item_id: Int!
+    name: String!
+    description: String!
+    image_url: String!
+    price: Float!
+  }
+
+type OrderOutput {
+    order_id: Int!
+    name: String!
+    address: String!
+    phone: String!
+    ordered_items: [ShopItemOutput!]
+  }
+
+  input Order {
+    order_id: Int!
+    name: String!
+    address: String!
+    phone: String!
+    ordered_items: [ShopItem!]
+  }
+
+  type Query {
+    getShopItems: [ShopItemOutput!],
+    getOrders: [OrderOutput!]
+  }
+
+  type Mutation {
+    addShopItem(shopItem: ShopItem): Response
+    removeShopItem(shopItemId: Int): Response
+    addOrder(order: Order): Response
+    removeOrder(orderId: Int): Response
+    login(user: User): Token
+  }
